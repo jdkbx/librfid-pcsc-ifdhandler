@@ -1,0 +1,45 @@
+Index: python/Makefile
+===================================================================
+--- python/Makefile	(revision 2265)
++++ python/Makefile	(working copy)
+@@ -27,7 +27,7 @@
+ SOURCE_MAIN=pyrfid.c
+ SOURCES=$(SOURCE_MAIN)  openpcd.c
+ INCLUDES=-I$(PYTHON_INC) -I../include/ -I../utils/
+-CFLAGS=-O3 -Wall $(INCLUDES)
++CFLAGS=-O3 -Wall $(INCLUDES) -fPIC
+ LDFLAGS=-shared -L$(LIBRFID_DIR) -lrfid -lusb  -Wl,--rpath -Wl,/usr/local/lib $(LIBS)
+ TARGET=$(SOURCE_MAIN:.c=.so)
+ OBJECTS=$(SOURCES:.c=.o)
+Index: src/rfid_asic_rc632.c
+===================================================================
+--- src/rfid_asic_rc632.c	(revision 2265)
++++ src/rfid_asic_rc632.c	(working copy)
+@@ -268,7 +268,7 @@
+ /* Wait until RC632 is idle or TIMER IRQ has happened */
+ static int rc632_wait_idle_timer(struct rfid_asic_handle *handle)
+ {
+-	int ret;
++	int ret, cnt;
+ 	u_int8_t stat, irq, cmd;
+ 
+ 	ret = rc632_reg_read(handle, RC632_REG_INTERRUPT_EN, &irq);
+@@ -283,6 +283,7 @@
+ 	if (ret < 0)
+ 		return ret;
+ 
++	cnt = 1;
+ 	while (1) {
+ 		rc632_reg_read(handle, RC632_REG_PRIMARY_STATUS, &stat);
+ 		DEBUGP_STATUS_FLAG(stat);
+@@ -309,7 +310,9 @@
+ 			if (irq & RC632_IRQ_TIMER && !(irq & RC632_IRQ_RX)) {
+ 				DEBUGP("timer expired before RX!!\n");
+ 				rc632_clear_irqs(handle, RC632_IRQ_TIMER);
+-				return -ETIMEDOUT;
++				if (++cnt > 2) {
++					return -ETIMEDOUT;
++				}
+ 			}
+ 		}
+ 
