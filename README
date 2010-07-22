@@ -1,0 +1,49 @@
+Name    : IFD Handler Develers Kit for MUSCLE PC/SC Lite
+Author  : David Corcoran
+Revision: August 1, 2000 (2.0)
+License : BSD Style - See file LICENSE
+
+This is the developers kit for a PC/SC driver for Unix and Mac OS X.
+Please refer to the documentation in PDF format in the docs directory
+for a complete guide to creating your own driver.
+
+Modifier: Kristian Beilke 22.07.2010
+
+This package has been modified to use librfid as to create an completely free and open source driver for the rc632 based Omnikey 5321 and 6321.
+
+1. get the svn version of librfid from
+
+http://openmrtd.org/projects/librfid/
+
+svn co https://svn.gnumonks.org/trunk/librfid
+
+2. Apply the patch to the librfid sources
+
+patch -p0 < librfid_pcsc.patch
+
+3. build librfid
+
+./autogen.sh
+./configure --prefix=/usr --enable-ccid
+make
+make install (as root)
+
+optionally test, if librfid is working by changing into the utils directory and executing, when the hardware is connected and a iso14443a card is in the field
+./librfid-send_script script
+where script is a text file containing apdus
+
+4. build the ifd handler by just runnning
+make
+
+5. configure your pcscd to use the generated library by adding the following lines to readers.conf
+
+FRIENDLYNAME     "librfid"
+DEVICENAME       /dev/null
+LIBPATH          /PATH_TO_GENERATED_IFD_HANDLER/libgen_ifd_librfid.so
+CHANNELID        0x000001
+
+6. connect the hardware and restart pcscd, there should now be a reader available.
+
+stopping pcscd will hang, so it has to be killed manually!
+killall pcscd -9
+this is due to the patch to librfid, which disbles a return by timeout from an interrupt handling routine. unfortunately this return inhibits the normal receiving action and had to be disabled. a clean solution would be much appreciated. 
